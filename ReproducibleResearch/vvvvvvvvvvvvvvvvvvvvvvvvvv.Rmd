@@ -1,0 +1,68 @@
+---
+title: "Simulation exercise"
+output: html_document
+---
+
+###1. Show where the distribution is centered at and compare it to the theoretical center of the distribution
+
+The following code simulates the distribution of averages of 40 exponential(0.2)s. This distribution is called mexp.
+```{r}
+set.seed(200)
+lambda <- 2
+mexp <- NULL
+for (i in 1 : 1000) (mexp = c(mexp, mean(rexp(40,lambda))))
+```
+
+The following code computes the theorical center of the distribution.
+```{r}
+1/lambda
+```
+
+The following code computes the center of the simulated distribution of averages of 40 exponential(0.2)s. 
+```{r}
+espsim <- mean(mexp)
+espsim
+```
+The distribution center is very close to its theorical value.
+
+###2. Show how variable it is and compare it to the theoretical variance of the distribution.
+
+The following code computes the theorical variance of the distribution.
+```{r}
+varsim <- (1/lambda)^2/40
+varsim
+```
+
+The following code computes the variance of the simulated distribution of averages of 40 exponential(0.2)s.
+```{r}
+var(mexp)
+```
+The variance of the distribution is very close to its theorical value.
+
+###3. Show that the distribution is approximately normal.
+
+The 40 exponential(0.2)s. are iid variables.
+
+The Central Limit Theorem states that the distribution of averages of iid variables becomes that of a standard normal as the sample size increases.
+
+So we can say that mexp is approximately a normal density with an expectancy of espsim and a variance of varsim.
+
+The following codes will illustrate this by a plot.
+
+This codes simulate the normal density with an expectancy of epsim and a variance of varsim.
+```{r}
+norm <- rnorm(1000, mean = espsim, sd = sqrt(varsim))
+```
+
+The following codes shows with a plot the similarity between the distribution of the mean of 40 exponential(0.2)s (mexp) and the distribution of the normal density with an expectancy of epsim and a variance of varsim(norm).
+```{r,fig.height=8,fig.width=12}
+par(mfrow = c(1,2))
+hist(mexp, breaks = 24,xlab = "",ylab = "", prob=TRUE,main = "40 Exponential(0,2)s")
+lines(density(mexp),col = "red")
+lines(density(norm), col = "blue")
+legend("topright", legend = c("density of mexp","density of norm"), col = c("red","blue"), lwd = 1)
+hist(norm,breaks = 24,xlab = "",ylab = "", prob=TRUE,main = "Norm(espsim,varsim)")
+lines(density(mexp),col = "red")
+lines(density(norm), col = "blue")
+legend("topright", legend = c("density of mexp","density of norm"), col = c("red","blue"), lwd = 1)
+```

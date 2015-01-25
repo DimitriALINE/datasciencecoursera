@@ -1,0 +1,108 @@
+---
+title: "Basic inferential data analysis."
+output: pdf_document
+---
+
+
+##1 Load the ToothGrowth data and perform some basic exploratory data analyses
+
+The ToothGrowth database measures the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid).
+
+The following plot illustrates the ToothGrowth databe. It shows the length of teeth by dose a delivery methods.
+```{r, echo=TRUE}
+data <- ToothGrowth
+plot(data$dose,data$len,xlab="Dose in mg",ylab="Lenght",main="ToothGrowth")
+points(data$dose[data$supp == "OJ"],data$len[data$supp == "OJ"], col = "red")
+points(data$dose[data$supp == "VC"],data$len[data$supp == "VC"], col = "blue")
+legend("topleft", legend = c("Orange Juice","Ascorbic Acid"), col = c("red","blue"), pch = 1,title="Delivery Methods")
+
+```
+
+##2 Provide a basic summary of the data.
+
+The following codes give a basic summary of the database.
+```{r, echo=TRUE}
+summary(ToothGrowth)
+str(ToothGrowth)
+```
+
+This table shows that there is a 10 pig sample for every combination of dose and delivery method. The description of the database says that the 10 pigs are the same for every sample.
+```{r, echo=TRUE}
+table(ToothGrowth$dose,ToothGrowth$supp)
+```
+
+The following code groups the database by dose and delivery method and computes the mean of the 10 pig sample for every combination of parameters.
+```{r, echo=TRUE,results='hide'}
+library(dplyr)
+```
+```{r, echo=TRUE}
+data <- group_by(data,supp,dose)
+sum <- summarize(data,mean(len))
+sum
+```
+
+##3 Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. 
+
+The sample of 10 pigs is the same for each combination of dose and delivery methods. So we will use paired T-test to compare the effect of dose and delivery methods in the lenght of teeth.
+
+The first T-test (t1) tests the diference between the sample with a 1mg dose and the sample with a 0.5mg dose.
+```{r, echo=TRUE}
+t1 = t.test(data$len[data$dose == 1],data$len[data$dose == 0.5],paired = TRUE)
+```
+
+The second T-test (t2) tests the diference between the sample with a 2mg dose and the sample with a 1mg dose.
+```{r, echo=TRUE}
+t2 = t.test(data$len[data$dose == 2],data$len[data$dose == 1],paired = TRUE)
+```
+
+The third T-test (t3) tests the diference between the sample with a 0.5mg dose delivered with Orange Juice and the sample with a 0.5mg dose delivered with ascorbic acid.
+```{r, echo=TRUE}
+t3 = t.test(data$len[data$supp == "OJ" & data$dose == 0.5],data$len[data$supp == "VC" & data$dose == 0.5],paired = TRUE)
+```
+
+The fourth T-test (t4) tests the diference between the sample with a 1mg dose delivered with Orange Juice and the sample with a 1mg dose delivered with ascorbic acid.
+```{r, echo=TRUE}
+t4 = t.test(data$len[data$supp == "OJ" & data$dose == 1],data$len[data$supp == "VC" & data$dose == 1],paired = TRUE)
+```
+
+The last T-test (t5) tests the diference between the sample with a 2mg dose delivered with Orange Juice and the sample with a 2mg dose delivered with ascorbic acid.
+```{r, echo=TRUE}
+t5 = t.test(data$len[data$supp == "OJ" & data$dose == 2],data$len[data$supp == "VC" & data$dose == 2],paired = TRUE)
+```
+
+##4 State your conclusions and the assumptions needed for your conclusions.
+
+###A Test t1
+I assume that the difference between the sample with a 1mg dose and the sample with a 0.5mg dose is equal to 0.
+```{r, echo=TRUE}
+t1
+```
+We can reject this assumption. The confidence interval is entirely above zero so the 1mg dose appears to be more effective than the 0.5mg dose.
+
+###B Test t2
+I assume that the difference between the sample with a 2mg dose and the sample with a 1mg dose is equal to 0.
+```{r, echo=TRUE}
+t2
+```
+We can reject this assumption. The confidence interval is entirely above zero so the 2mg dose appears to be more effective than the 1mg dose.
+
+###C Test t3
+I assume that the difference between the sample with a 0.5mg dose delivered with Orange Juice and the sample with a 0.5mg dose delivered with ascorbic acid is equal to 0.
+```{r, echo=TRUE}
+t3
+```
+We can reject this assumption. The confidence interval is entirely above zero so for a 0.5mg dose the Orange Juice delivery method appears to be more effective than the Ascorbic Acid delivery method.
+
+###D Test t4
+I assume that the difference between the sample with a 1mg dose delivered with Orange Juice and the sample with a 1mg dose delivered with ascorbic acid is equal to 0.
+```{r, echo=TRUE}
+t4
+```
+We can reject this assumption. The confidence interval is entirely above zero so for a 1mg dose the Orange Juice delivery method appears to be more effective than the Ascorbic Acid delivery method.
+
+###E Test t5
+I assume that the difference between the sample with a 2mg dose delivered with Orange Juice and the sample with a 2mg dose delivered with ascorbic acid is equal to 0.
+```{r, echo=TRUE}
+t5
+```
+We can't reject this assumption. There is no evidence that a delivery method is better than the other for a 2mg dose.

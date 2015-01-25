@@ -1,0 +1,396 @@
+---
+title: "Extreme weather events and their human and economic consequences in the U.S."
+output: html_document
+---
+##Synopsis
+The goal of this study is to determine the events that have the biggest effect for humans and the economy. I explored the NOAA storm database and analysed injuries, fatalities, property and crop damages for each event. I classified the different severe weather events in 11 categories. Then I constructed tables to summarize the database and drew pie chart plots to illustrate the results.It appears that Tornados and Heat and dryness are the most harmful with human health. This study showed aswell that Hurricanes and Floods have the greatest economic consequences.
+
+##Data Processing
+
+###1 Loading the database 
+
+The raw datas are load from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+setwd("C:/Users/dimitri/datasciencecoursera/ReproducibleResearch")
+storm <- read.table("repdata-data-StormData.csv.bz2", sep = ",", header=TRUE)
+```
+
+The aim of this study is answering to the following questions:
+
+  - Across the United States, which types of events are most harmful with respect to population health?
+  
+  - Across the United States, which types of events have the greatest economic consequences?
+  
+For that matter we choose to select only the variables that help to answer this question:
+
+  - EVTYPE: Type of event
+  
+  - FATALITIES: Number of dead people because of the event
+  
+  - INJURIES: Number of injured people because of the event
+  
+  - PROPDMG: 3 digit number indicating the property damage cost of the event
+  
+  - PROPDMGEXP: letter indicating the magnitude of the Property Damage number
+  
+  - CROPDMG: 3 digit number indicating the crop damage cost of the event
+  
+  - CROPDMGEXP: letter indicating the magnitude of the Crop Damage number
+  
+  - REMARKS: Description of the event
+  
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+library(dplyr)
+storm <- select(storm,EVTYPE,FATALITIES,INJURIES,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP,REMARKS)
+sum(is.na(storm))
+```
+The previous line shows that there is no missing datas.
+
+###2 Cleaning the EVTYPE variable.
+
+The National Weather Service says in the Storm Data Documentation that there are around 50 types of event. Some of this type of event are close so they can be gathered in a more general type. And it will be easier for the study and analysis to group these types.
+The goal is to group the EVTYPE datas into a small number of really different types of event.
+
+The following Code transforms all the EVTYPE datas into lower case letters and trims the whitespace from start and end of the variable.
+Then a table of the most numerous EVTYPE is created.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+storm$EVTYPE <- tolower(storm$EVTYPE)
+library(stringr)
+storm$EVTYPE <-str_trim(storm$EVTYPE)
+head(sort(table(storm$EVTYPE), decreasing = TRUE),100)
+```
+
+After the observation of this table and the NOAA documentation I decided to group the EVTYPE variable into 11 categories.
+
+You can see the names of the categories and what type of event that they group:
+
+  - landslide, avalanche or volcanic ash: Avalanche, Volcanic Ash, Landslide
+  
+  - sea wave and current: Astronomical Low Tide, High Surf, Rip Current, Seiche, Storm Surge/Tide, Tsunami 
+  
+  - heat and dryness: Dense Smoke, Drought, Dust Devil, Dust Storm, Excessive Heat, Heat, Wildfire
+  
+  - winter storm and other winter weather: Blizzard, Heavy Snow, Ice Storm, Lake-Effect Snow, Sleet, Winter Storm, Cold/Wind Chill, Dense Fog, Extreme Cold/Wind Chill, Frost/Freeze, Freezing Fog, Winter Weather
+  
+  - flood: Coastal Flood, Debris Flow, Flash Flood, Flood, Lakeshore Flood, Mudslide
+  
+  - rain: Heavy Rain
+  
+  - hail: Hail, Marine Hail
+  
+  - tornado: Funnel Cloud, Tornado, Waterspout
+  
+  - hurricane: Hurricane (Typhoon), Tropical Depression, Tropical Storm
+  
+  - thunderstorm: Lightning, Marine Thunderstorm Wind, Thunderstorm Wind
+  
+  - other wind storm: High Wind, Marine High Wind, Marine Strong Wind, Strong Wind
+  
+The following code groups the EVTYPE into 11 categories.   
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+x <- grep(("landslide|volcan|avalanche"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "landslide, avalanche or volcanic ash"}
+x <- grep(("surf|tsunami|seiche|rip|surge|tide"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "sea wave and current"}
+x <- grep(("drought|heat|dry|fire|dust|warmth|warm|record|smoke"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "heat and dryness"}
+x <- grep(("winter storm|snow|blizzard|ice storm|sleet|cold|ice|freez|frozen|frost|winter weather|chill|wintry|icy|glaze|low temperature|fog"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "winter storm and other winter weather"}
+x <- grep(("flood|fld|debris|mudslide|mud"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "flood"}
+x <- grep(("rain|precipitation|precip"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "rain"}
+x <- grep(("hail"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "hail"}
+x <- grep(("tornado|waterspout|funnel"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "tornado"}
+x <- grep(("hurricane|tropical|typhoon"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "hurricane"}
+x <- grep(("thunderstorm|tstm|lightning"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "thunderstorm"}
+x <- grep(("wind|winds"),storm$EVTYPE)
+  for (i in x) {storm$EVTYPE[i] <- "other wind storm"}
+storm$EVTYPE <- as.factor(storm$EVTYPE)
+```
+
+The following code remove the observations that can't be classified into these 11 categories.
+Then the code shows the number of observations before and after the filter of the database.
+
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+length(storm$EVTYPE)
+storm <- filter(storm,EVTYPE == "other wind storm" | EVTYPE == "thunderstorm" | EVTYPE == "hurricane" | EVTYPE == "tornado" | EVTYPE == "hail" | EVTYPE == "rain"| EVTYPE == "flood" | EVTYPE == "winter storm and other winter weather" | EVTYPE == "heat and dryness" | EVTYPE == "sea wave and current"| EVTYPE == "landslide, avalanche or volcanic ash")
+length(storm$EVTYPE)
+```
+
+ With this classification, only 363 observations are removed from the database out of 902297.
+
+###3 Splitting the database into two database.
+
+The following code splits the database into two database. The first on is stormhum, it is the database to answer to the first question of the study, it contains all the observations with at least 1 Fatality or Injury. The second one is stormdmg, it is the database to answer to the second question of the study, it contains all the observations that caused Property damage or Crop damage.
+
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormhum <- filter(storm,FATALITIES != 0 | INJURIES != 0)
+stormdmg <- filter(storm,PROPDMG != 0 | CROPDMG != 0)
+stormhum <- select(stormhum,EVTYPE,FATALITIES,INJURIES,REMARKS)
+stormdmg<- select(stormdmg,EVTYPE,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP,REMARKS)
+```
+
+###4 Cleaning the damage variables
+
+The NOAA documentation indicates for the property damage and crop damage variables that estimation should be rounded to three significant digits, followed by an alphabetical character signifying the magnitude of the number.
+Alphabetical characters used to signify magnitude include "K" for thousands, "M" for millions, and "B" for billions.
+
+The following code filters the damage database with the observations that have a PROPDMG or a CROPDMG number bigger that 3 digits.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormext <- filter(stormdmg,PROPDMG > 999|CROPDMG > 999)
+stormext
+```
+
+All this extreme values are under the PROPDMG variable, and they have a PROPDMGEXP variable that is "K". I presume that the people who inputed this datas made a mistake. They indicated the total number of damage in the PROPDMG variable.
+
+So I decided to divide the PROPDMG number of these extreme observations by 1000 and to keep the "K" of the PROPDMGEXP variable.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+n <- length(stormdmg$PROPDMG)
+for (i in 1:n) {
+                if (stormdmg$PROPDMG[i] > 999) {stormdmg$PROPDMG[i] <- stormdmg$PROPDMG[i] / 1000}
+                }
+```
+
+The following code transforms all the PROPDMGEXP and CROPDMGEXP datas into lower case letters.
+Then the code multiplies the PROPDMG and CROPDMG numbers by their corresponding magnitude given by the PROPDMGEXP and CROPDMGEXP variables.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormdmg$PROPDMGEXP <- tolower(stormdmg$PROPDMGEXP)
+stormdmg$CROPDMGEXP <- tolower(stormdmg$CROPDMGEXP)
+x <- grep(("k"),stormdmg$CROPDMGEXP)
+  for (i in x){stormdmg$CROPDMG[i] <- stormdmg$CROPDMG[i] * 1000}
+x <- grep(("m"),stormdmg$CROPDMGEXP)
+  for (i in x){stormdmg$CROPDMG[i] <- stormdmg$CROPDMG[i] * 1000000}
+x <- grep(("b"),stormdmg$CROPDMGEXP)
+  for (i in x){stormdmg$CROPDMG[i] <- stormdmg$CROPDMG[i] * 1000000000}
+x <- grep(("k"),stormdmg$PROPDMGEXP)
+  for (i in x) {stormdmg$PROPDMG[i] <- stormdmg$PROPDMG[i] * 1000}
+x <- grep(("m"),stormdmg$PROPDMGEXP)
+  for (i in x){stormdmg$PROPDMG[i] <- stormdmg$PROPDMG[i] * 1000000}
+x <- grep(("b"),stormdmg$PROPDMGEXP)
+  for (i in x){stormdmg$PROPDMG[i] <- stormdmg$PROPDMG[i] * 1000000000}
+```
+
+In the following code lines I am looking for false extreme values that could have consequence for the study.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+tail(table(stormdmg$PROPDMG),20)
+stormext <- filter(stormdmg,PROPDMG > 10000000000)
+stormext
+tail(table(stormdmg$CROPDMG),20)
+stormext <- filter(stormdmg,CROPDMG > 500000000)
+stormext
+```
+
+Thus, I modified the value of one observation in the PROPDMG variable because reading the remarks I noticed it was clearly false. 
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormdmg$PROPDMG[stormdmg$PROPDMG == 1.150e+11] <- 115000000
+```
+
+###5 Grouping and Summarizing datas in tables
+
+Now the data are cleaned, I will proceed to the analysis.
+
+I group the stormhum database by the EVTYPE variable and create 2 new variables that are respectively the total number of Injuries and the total number of Fatalities.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormhum <- summarize(group_by(stormhum,EVTYPE),sum(INJURIES),sum(FATALITIES))
+```
+
+I group the stormdmg database by the EVTYPE variable and create 2 new variables that are respectively the total ammount in dollar of Property damages and Crop damages.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormdmg <- summarize(group_by(stormdmg,EVTYPE),sum(PROPDMG),sum(CROPDMG))
+```
+
+I group the storm database by the EVTYPE variable and create 1 new variable that is the number of observations of each EVTYPE.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormn <- summarize(group_by(storm,EVTYPE),n())
+```
+
+I modify the names of variables.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+colnames(stormhum) <- c("EVENTS","INJURIES","FATALITIES")
+colnames(stormdmg) <- c("EVENTS","PropertyDamage","CropDamage")
+```
+
+I transform the Property damage variable and the Crop damage variable from dollar to millions of dollars. It is better for reading the number of the table.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormdmg <- mutate(stormdmg,PropertyDamage = PropertyDamage / 1000000, CropDamage = CropDamage / 1000000)
+```
+
+I create a first result table (stormresult1). This table is the combination of the grouped EVTYPE variable, the sum of Injuries variable, the sum of Fatalities variable, the sum of Property damage variable, the sum of Crop damage variable and the number of observations for each EVTYPE.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormresult1 <- cbind(stormhum,stormdmg$PropertyDamage,stormdmg$CropDamage,stormn[2])
+colnames(stormresult1) <- c("Weather Event","Injuries","Fatalities","PropertyDamage","CropDamage","NumberEvents")
+```
+
+I create a second result table (stormresult2) that transform the first one into percentage.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormresult2 <- stormresult1
+stormresult2 <- mutate(stormresult1,Injuries = Injuries/sum(Injuries)*100,NumberEvents = NumberEvents/sum(NumberEvents)*100,Fatalities = Fatalities/sum(Fatalities)*100,PropertyDamage = PropertyDamage/sum(PropertyDamage)*100,CropDamage = CropDamage/sum(CropDamage)*100)
+```
+
+I round the numeric variables with 2 decimals.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormresult1[4] <- round(stormresult1[4],2)
+stormresult1[5] <- round(stormresult1[5],2)
+stormresult2[2] <- round(stormresult2[2],2)
+stormresult2[3] <- round(stormresult2[3],2)
+stormresult2[4] <- round(stormresult2[4],2)
+stormresult2[5] <- round(stormresult2[5],2)
+stormresult2[6] <- round(stormresult2[6],2)
+```
+
+I modify the names of variables.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+colnames(stormresult1) <- c("WeatherEvent","Injuries","Fatalities","PropertyDamage","CropDamage","NumberEvents")
+colnames(stormresult2) <- c("WeatherEvent","Injuries","Fatalities","PropertyDamage","CropDamage","NumberEvents")
+```
+
+###6 Creating pie plots to illustrate the results.
+
+The following code lines are the tools used to make the following pie plots.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+library("ggplot2")
+library("grid")
+library("gridExtra")
+library("RColorBrewer")
+pal <- brewer.pal(12,"Set3")
+```
+
+The pie chart showing the number of observations for each type of Weather event is created.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+p1 = ggplot(stormresult2, aes( x= factor(1), y = NumberEvents, fill = factor(WeatherEvent))) + geom_bar(width = 1,stat="identity",colour = "white") + 
+  coord_polar(theta = "y") + scale_fill_manual(values = pal) + labs(fill="Weather Event") + xlab("") + ylab("Number of Events") + 
+  theme(axis.ticks=element_blank(),axis.text.y=element_blank()) + scale_y_continuous(breaks=cumsum(stormresult2$NumberEvents) - stormresult2$NumberEvents/2,labels=stormresult1$NumberEvents)
+```
+
+The pie chart showing the number of injured people for each type of Weather event is created.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+p2 = ggplot(stormresult2, aes( x= factor(1), y = Injuries, fill = factor(WeatherEvent))) + geom_bar(width = 1,stat="identity",colour = "white") + 
+  coord_polar(theta = "y") + scale_fill_manual(values = pal) + labs(fill="Weather Event") + xlab("") + ylab("Injuries") + 
+  theme(axis.ticks=element_blank(),axis.text.y=element_blank()) + scale_y_continuous(breaks=cumsum(stormresult2$Injuries) - stormresult2$Injuries/2,labels=stormresult1$Injuries) 
+```
+
+The pie chart showing the number of fatilities for each type of Weather event is created.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+p3 = ggplot(stormresult2, aes( x= factor(1), y = Fatalities, fill = factor(WeatherEvent))) + geom_bar(width = 1,stat="identity",colour = "white") + 
+  coord_polar(theta = "y") + scale_fill_manual(values = pal) + labs(fill="Weather Event") + xlab("") + ylab("Fatalities") + 
+  theme(axis.ticks=element_blank(),axis.text.y=element_blank()) + scale_y_continuous(breaks=cumsum(stormresult2$Fatalities) - stormresult2$Fatalities/2,labels=stormresult1$Fatalities) 
+```
+
+The pie chart showing the total ammount of property damage for each type of Weather event is created.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+p4 = ggplot(stormresult2, aes( x= factor(1), y = PropertyDamage, fill = factor(WeatherEvent))) + geom_bar(width = 1,stat="identity",colour = "white") + 
+  coord_polar(theta = "y") + scale_fill_manual(values = pal) + labs(fill="Weather Event") + xlab("") + ylab("Property Damage (M$)") + 
+  theme(axis.ticks=element_blank(),axis.text.y=element_blank()) + scale_y_continuous(breaks=cumsum(stormresult2$PropertyDamage) - stormresult2$PropertyDamage/2,labels=stormresult1$PropertyDamage) 
+```
+
+The pie chart showing the total ammount of crop damage for each type of Weather event is created.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+p5 = ggplot(stormresult2, aes( x= factor(1), y = CropDamage, fill = factor(WeatherEvent))) + geom_bar(width = 1,stat="identity",colour = "white") + 
+  coord_polar(theta = "y") + scale_fill_manual(values = pal) + labs(fill="Weather Event") + xlab("") + ylab("Crop Damage (M$)") + 
+  theme(axis.ticks=element_blank(),axis.text.y=element_blank()) + scale_y_continuous(breaks=cumsum(stormresult2$CropDamage) - stormresult2$CropDamage/2,labels=stormresult1$CropDamage) 
+```
+
+##Results
+
+###1 Result Tables
+The stormresult1 table is the combination of the grouped EVTYPE variable, the sum of Injuries variable, the sum of Fatalities variable, the sum of Property damage variable, the sum of Crop damage variable and the number of observations for each EVTYPE.The PropertyDamage et CropDamage variables are in million dollars.
+
+The stormresult2 table is the same of the previous table but transformed into percentage.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+stormresult1
+stormresult2
+```
+
+###2 Pie Plots
+The 3 following figures will illustrate the result table with pie plots.
+
+This pie chart shows the number of observations for each type of Weather event.
+```{r,cache=TRUE,cache.lazy=FALSE,echo=TRUE}
+p1
+```
+The 4 most frequent extreme weather event types are:
+
+  - Thunderstorm: 351436 events so 38.96% of total event number.
+  
+  - Hail: 290399 events so 32.20% of total event number.
+  
+  - Flood: 86140 events so 9.55% of total event number.
+  
+  - Tornado: 71526 events so 7.93% of total event number.
+
+The following figure is a panel plot with two pie plots. It is illustrating the Human consequences of each type of weather event in term of injuries and fatalities.
+```{r,cache=TRUE,cache.lazy=FALSE,fig.width = 15,echo=TRUE}
+phum <- grid.arrange(p2, p3, ncol = 2, main = "Human Damage")
+```
+
+The extreme weather events that lead to the most injuries are:
+
+  - Tornado: 91439 injuries so 65.08% of total number of injuries.
+  
+  - Thunderstorm: 14679 injuries so 10.45% of total number of injuries.
+  
+  - Heat and dryness: 11367 injuries so 8.09% of total number of injuries.
+  
+  - Flood: 8683 injuries so 6.18% of total number of injuries.
+  
+  - Winter storm and other winter weather: 7781 injuries so 5.54% of total number of injuries.
+  
+  
+  
+The extreme weather events that lead to the most fatalities are:
+
+  - Tornado:5639 fatalities so 37.34% of total number of fatalities.
+  
+  - Heat and dryness: 3296 fatalities so 21.83% of total number of fatalities.
+  
+  - Flood: 1558 fatalities so 10.32% of total number of fatalities.
+  
+  - Thunderstorm:  1541 fatalities so 10.21% of total number of fatalities.
+  
+  - Winter storm and other winter weather: 1211 fatalities so 8.02% of total number of fatalities.
+  
+The following figure is a panel plot with two pie plots. It is illustrating the economic consequences of each type of weather event in term of property and crop damages.
+```{r,cache=TRUE,cache.lazy=FALSE,fig.width = 15,echo=TRUE}
+pdmg <- grid.arrange(p4, p5, ncol = 2, main = "Material Damage")
+```
+
+The extreme weather events that lead to the most property damages are:
+
+  - Hurricane: 93072.5 M$ of property damages so 29.80% of the total number of property damages.
+  
+  - Tornado: 56991.5 M$ of property damages so 18.24% of the total number of property damages.
+  
+  - Flood: 52671.6 M$ of property damages so 16.86% of the total number of property damages.
+  
+  - Sea wave and current: 48235.2 M$ of property damages so 15.44% of the total number of property damages. 
+  
+  
+  
+The extreme weather events that lead to the most crop damages are:
+
+  - Heat and dryness: 15283.94 of crop damages so  31.22% of the total number of crop damages.
+  
+  - Flood: 12383.58 of crop damages so  25.30% of the total number of crop damages.
+  
+  - Winter storm and other winter weather: 8752.13 of crop damages so  17.88% of the total number of crop damages.
+  
+  - Hurricane: 6211.01 of crop damages so  12.69% of the total number of crop damages.
+  
+###3 Conclusions
+
+Even though the Thunderstorms and Hails are the severe weather event the most frequent (respectively 38.96% and 32.20%), they are not the most harmful with the population health and they have not the greatest economic consequences.
+
+Clearly the Tornados are the most harmful with the population health. Indeed they represent 65.08% of the injuries and 37.34% of the fatalities.
+Then Heat and dryness represent 8.09% of the injuries and 21.83% of the fatalities.
+
+Economicaly speaking Hurricanes have the greatest consequences with 29.80% of the property damages and 12.69% of the crop damages.
+Then Floods represent 16.86% of the property damages and 25.30% of the crop damages.
+Tornados and Sea wave and current have also great consequences for property damages (18.24%, 15.44%).
+
+Heat and dryness is the worst for crops,it represents 31.22% of the crop damages.
+

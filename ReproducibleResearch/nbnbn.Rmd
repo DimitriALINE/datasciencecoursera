@@ -1,0 +1,27 @@
+---
+title: "gfgf"
+output: html_document
+---
+
+902297
+901913
+
+
+```{r}
+storm <- read.table("repdata-data-StormData.csv.bz2", sep = ",", header=TRUE)
+
+library(dplyr)
+storm <- select(storm,EVTYPE,FATALITIES,INJURIES,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP,REMARKS)
+
+storm$EVTYPE <- tolower(storm$EVTYPE)
+library(stringr)
+storm$EVTYPE <-str_trim(storm$EVTYPE)
+```
+
+:
+
+```{r}
+
+```
+
+
